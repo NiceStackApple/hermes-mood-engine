@@ -1,0 +1,35 @@
+name: mood-engine
+version: "1.1.0"
+description: Dynamic 4-axis mood engine (energy, warmth, patience, focus) with async post-turn evaluation and zero-overhead neutral baseline.
+author: NiceStackApple
+requires_hermes: ">=0.19"
+provides_hooks:
+  - pre_llm_call
+  - post_llm_call
+config_schema:
+  evaluator_mode:
+    type: str
+    choices: [auto, llm, heuristic]
+    default: auto
+    label: Evaluator mode
+    description: How turn mood deltas are evaluated (auto = ctx.llm with heuristic fallback, llm = LLM only, heuristic = zero extra tokens).
+  step_size:
+    type: int
+    default: 12
+    label: Step size
+    description: Score change applied per -1/+1 turn delta (1-30).
+  recovery_per_hour:
+    type: int
+    default: 8
+    label: Recovery per hour
+    description: Idle recovery rate toward neutral baseline (50) per hour.
+  enabled_night_fatigue:
+    type: bool
+    default: true
+    label: Night fatigue
+    description: Apply a soft energy cap (48) late at night (23:00-05:00 local time).
+  inject_in_neutral:
+    type: bool
+    default: false
+    label: Show neutral state
+    description: Inject mood status even when all 4 axes are neutral (off = zero prompt tokens when neutral).
