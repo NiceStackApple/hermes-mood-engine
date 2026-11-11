@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 from datetime import datetime
 import logging
 import re
@@ -434,10 +435,12 @@ def register(ctx: Any) -> None:
                 _save(updated)
             return
 
-        # Run LLM evaluation off the turn thread so post_llm_call returns immediately.
+        # Copy active contextvars so multiplexed profile scope (_HERMES_HOME_OVERRIDE)
+        # survives into the daemon thread for ctx.state, ctx.get_config, and ctx.llm.
+        ctx_copy = contextvars.copy_context()
         worker = threading.Thread(
-            target=_run_background_eval,
-            args=(user_message, bot_reply, mode, step_size),
+            target=ctx_copy.run,
+            args=(_run_background_eval, user_message, bot_reply, mode, step_size),
             daemon=True,
         )
         worker.start()

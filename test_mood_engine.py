@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import importlib.util
 from pathlib import Path
 import time
@@ -100,6 +101,29 @@ def run_tests() -> None:
         time.sleep(0.02)
     s_fb = ctx_fb.state.get("mood")
     assert s_fb is not None and s_fb["last_evaluator"] == "heuristic" and s_fb["patience"] < 50.0
+
+    # ContextVars propagation across background thread (multiplexed profile isolation)
+    profile_var: contextvars.ContextVar[str] = contextvars.ContextVar("profile_var", default="default")
+    seen_profiles: list[str] = []
+
+    class _ScopedLlm(_FakeLlm):
+        def complete_structured(self, **kwargs):
+            seen_profiles.append(profile_var.get())
+            return super().complete_structured(**kwargs)
+
+    ctx_scoped = _FakeCtx(evaluator_mode="auto", llm=_ScopedLlm(
+        parsed={"e_delta": 0, "w_delta": 1, "p_delta": 0, "f_delta": 0, "reason": "scoped ok"}
+    ))
+    mod.register(ctx_scoped)
+    tok = profile_var.set("meina")
+    try:
+        ctx_scoped.hooks["post_llm_call"](user_message="makasih mei", assistant_response="sama-sama")
+    finally:
+        profile_var.reset(tok)
+    deadline = time.time() + 2.0
+    while ctx_scoped.state.get("mood") is None and time.time() < deadline:
+        time.sleep(0.02)
+    assert seen_profiles == ["meina"], f"expected ['meina'], got {seen_profiles}"
 
     # 6. Idle time drift & internal prefixes & slash commands
     now = time.time()
