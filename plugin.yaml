@@ -2,7 +2,7 @@ name: mood-engine
 version: "1.1.0"
 description: Dynamic 4-axis mood engine (energy, warmth, patience, focus) with async post-turn evaluation and zero-overhead neutral baseline.
 author: NiceStackApple
-requires_hermes: ">=0.19"
+requires_hermes: ">=0.20.0"
 provides_hooks:
   - pre_llm_call
   - post_llm_call
